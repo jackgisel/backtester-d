@@ -1,0 +1,184 @@
+{% extends "backtests/base.html" %}
+
+{% block title %}Dashboard - Backtester{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left column: Forms -->
+    <div class="space-y-6">
+        <!-- Backtest Form -->
+        <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+            <h2 class="text-lg font-semibold mb-4">Run Backtest</h2>
+            <form hx-post="{% url 'backtests:run' %}"
+                  hx-target="#results-panel"
+                  hx-swap="innerHTML"
+                  hx-indicator="#backtest-spinner"
+                  class="space-y-3">
+                {% csrf_token %}
+                {% for field in backtest_form %}
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}
+                    <p class="text-red-400 text-xs mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+                    <span class="htmx-indicator" id="backtest-spinner">
+                        <svg class="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        Running...
+                    </span>
+                    <span>Run Backtest</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Optimization Form -->
+        <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+            <h2 class="text-lg font-semibold mb-4">Optimize Parameters</h2>
+            <form hx-post="{% url 'backtests:optimize' %}"
+                  hx-target="#results-panel"
+                  hx-swap="innerHTML"
+                  hx-indicator="#opt-spinner"
+                  class="space-y-3">
+                {% csrf_token %}
+                {% for field in opt_form %}
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+                {% endfor %}
+                <button type="submit"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition">
+                    <span class="htmx-indicator" id="opt-spinner">
+                        <svg class="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        Optimizing...
+                    </span>
+                    <span>Run Optimization</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Walk-Forward Form -->
+        <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+            <h2 class="text-lg font-semibold mb-4">Walk-Forward Validation</h2>
+            <form hx-post="{% url 'backtests:walk_forward' %}"
+                  hx-target="#results-panel"
+                  hx-swap="innerHTML"
+                  hx-indicator="#wf-spinner"
+                  class="space-y-3">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Symbol</label>
+                    <input type="text" name="symbol" placeholder="NVDA" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Strategy</label>
+                    <select name="strategy_name" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                        <option value="ORB">Opening Range Breakout</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Start</label>
+                        <input type="date" name="start_date" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">End</label>
+                        <input type="date" name="end_date" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Train days</label>
+                        <input type="number" name="train_days" value="120" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Test days</label>
+                        <input type="number" name="test_days" value="30" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Trials</label>
+                        <input type="number" name="n_trials" value="50" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md">
+                    </div>
+                </div>
+                <button type="submit"
+                        class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-md transition">
+                    <span class="htmx-indicator" id="wf-spinner">
+                        <svg class="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        Running...
+                    </span>
+                    <span>Run Walk-Forward</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right column: Results -->
+    <div class="lg:col-span-2">
+        <div id="results-panel">
+            <!-- Recent backtests -->
+            <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+                <h2 class="text-lg font-semibold mb-4">Recent Backtests</h2>
+                {% if recent %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-800">
+                                <th class="text-left py-2 px-2">Strategy</th>
+                                <th class="text-left py-2 px-2">Symbol</th>
+                                <th class="text-right py-2 px-2">Return</th>
+                                <th class="text-right py-2 px-2">Sharpe</th>
+                                <th class="text-right py-2 px-2">Trades</th>
+                                <th class="text-left py-2 px-2">Status</th>
+                                <th class="py-2 px-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for bt in recent %}
+                            <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                                <td class="py-2 px-2">{{ bt.strategy_name }}</td>
+                                <td class="py-2 px-2 font-mono">{{ bt.security.symbol }}</td>
+                                <td class="py-2 px-2 text-right {% if bt.total_return_pct and bt.total_return_pct > 0 %}text-green-400{% elif bt.total_return_pct and bt.total_return_pct < 0 %}text-red-400{% endif %}">
+                                    {% if bt.total_return_pct is not None %}{{ bt.total_return_pct }}%{% else %}-{% endif %}
+                                </td>
+                                <td class="py-2 px-2 text-right">{% if bt.sharpe_ratio is not None %}{{ bt.sharpe_ratio }}{% else %}-{% endif %}</td>
+                                <td class="py-2 px-2 text-right">{% if bt.total_trades is not None %}{{ bt.total_trades }}{% else %}-{% endif %}</td>
+                                <td class="py-2 px-2">
+                                    <span class="px-2 py-0.5 rounded-full text-xs
+                                        {% if bt.status == 'completed' %}bg-green-900 text-green-300
+                                        {% elif bt.status == 'failed' %}bg-red-900 text-red-300
+                                        {% elif bt.status == 'running' %}bg-yellow-900 text-yellow-300
+                                        {% else %}bg-gray-800 text-gray-400{% endif %}">
+                                        {{ bt.status }}
+                                    </span>
+                                </td>
+                                <td class="py-2 px-2">
+                                    {% if bt.status == 'completed' %}
+                                    <a href="{% url 'backtests:detail' bt.pk %}" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">No backtests yet. Run one using the form.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

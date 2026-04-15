@@ -1,0 +1,142 @@
+<div class="space-y-6">
+    <!-- Metrics Cards -->
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">
+                {{ backtest.strategy_name }} | {{ backtest.security.symbol }}
+                <span class="text-sm text-gray-400 font-normal ml-2">{{ backtest.start_date }} to {{ backtest.end_date }}</span>
+            </h2>
+            <a href="{% url 'backtests:detail' backtest.pk %}" class="text-blue-400 hover:text-blue-300 text-sm">Permalink</a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Total Return</div>
+                <div class="text-xl font-bold {% if backtest.total_return_pct and backtest.total_return_pct > 0 %}text-green-400{% elif backtest.total_return_pct and backtest.total_return_pct < 0 %}text-red-400{% endif %}">
+                    {% if backtest.total_return_pct is not None %}{{ backtest.total_return_pct }}%{% else %}-{% endif %}
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Sharpe Ratio</div>
+                <div class="text-xl font-bold">{{ backtest.sharpe_ratio|default:"-" }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Max Drawdown</div>
+                <div class="text-xl font-bold text-red-400">{{ backtest.max_drawdown_pct|default:"-" }}{% if backtest.max_drawdown_pct is not None %}%{% endif %}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Win Rate</div>
+                <div class="text-xl font-bold">{{ backtest.win_rate_pct|default:"-" }}{% if backtest.win_rate_pct is not None %}%{% endif %}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Profit Factor</div>
+                <div class="text-xl font-bold">{{ backtest.profit_factor|default:"-" }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Total Trades</div>
+                <div class="text-xl font-bold">{{ backtest.total_trades|default:"0" }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Avg Duration</div>
+                <div class="text-xl font-bold">{{ backtest.avg_trade_duration_minutes|default:"-" }}{% if backtest.avg_trade_duration_minutes is not None %}m{% endif %}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Capital</div>
+                <div class="text-xl font-bold">${{ backtest.initial_capital }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equity Curve Chart -->
+    {% if backtest.equity_curve %}
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h3 class="text-md font-semibold mb-3">Equity Curve</h3>
+        <div id="equity-chart" style="height: 300px;"></div>
+        <script>
+            (function() {
+                const container = document.getElementById('equity-chart');
+                const chart = LightweightCharts.createChart(container, {
+                    layout: { background: { color: '#111827' }, textColor: '#9ca3af' },
+                    grid: { vertLines: { color: '#1f2937' }, horzLines: { color: '#1f2937' } },
+                    timeScale: { timeVisible: true, borderColor: '#374151' },
+                    rightPriceScale: { borderColor: '#374151' },
+                });
+
+                const data = {{ equity_curve_json|safe }};
+                const series = chart.addLineSeries({
+                    color: '#3b82f6',
+                    lineWidth: 2,
+                });
+                series.setData(data.map(d => ({
+                    time: Math.floor(d.t / 1000),
+                    value: d.v,
+                })));
+                chart.timeScale().fitContent();
+
+                new ResizeObserver(() => {
+                    chart.applyOptions({ width: container.clientWidth });
+                }).observe(container);
+            })();
+        </script>
+    </div>
+    {% endif %}
+
+    <!-- Trades Table -->
+    {% if trades %}
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h3 class="text-md font-semibold mb-3">Trades ({{ trades|length }})</h3>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="sticky top-0 bg-gray-900">
+                    <tr class="text-gray-400 border-b border-gray-800">
+                        <th class="text-left py-2 px-2">Dir</th>
+                        <th class="text-left py-2 px-2">Entry</th>
+                        <th class="text-left py-2 px-2">Exit</th>
+                        <th class="text-right py-2 px-2">Entry $</th>
+                        <th class="text-right py-2 px-2">Exit $</th>
+                        <th class="text-right py-2 px-2">P&L</th>
+                        <th class="text-right py-2 px-2">P&L %</th>
+                        <th class="text-left py-2 px-2">Reason</th>
+                        <th class="text-right py-2 px-2">Dur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in trades %}
+                    <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td class="py-1.5 px-2">
+                            <span class="px-1.5 py-0.5 rounded text-xs {% if t.direction == 'long' %}bg-green-900 text-green-300{% else %}bg-red-900 text-red-300{% endif %}">
+                                {{ t.direction }}
+                            </span>
+                        </td>
+                        <td class="py-1.5 px-2 text-xs text-gray-400">{{ t.entry_timestamp|date:"M d H:i" }}</td>
+                        <td class="py-1.5 px-2 text-xs text-gray-400">{{ t.exit_timestamp|date:"M d H:i" }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono">${{ t.entry_price }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono">${{ t.exit_price }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono {% if t.pnl > 0 %}text-green-400{% elif t.pnl < 0 %}text-red-400{% endif %}">
+                            ${{ t.pnl }}
+                        </td>
+                        <td class="py-1.5 px-2 text-right font-mono {% if t.pnl_pct > 0 %}text-green-400{% elif t.pnl_pct < 0 %}text-red-400{% endif %}">
+                            {{ t.pnl_pct }}%
+                        </td>
+                        <td class="py-1.5 px-2 text-xs">{{ t.exit_reason }}</td>
+                        <td class="py-1.5 px-2 text-right text-xs">{{ t.duration_minutes }}m</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Parameters Used -->
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h3 class="text-md font-semibold mb-3">Parameters</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {% for key, val in backtest.parameters.items %}
+            <div class="bg-gray-800 rounded px-3 py-2">
+                <span class="text-gray-400">{{ key }}:</span>
+                <span class="font-mono">{{ val }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

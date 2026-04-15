@@ -1,0 +1,10 @@
+{% extends "backtests/base.html" %}
+
+{% block title %}{{ backtest.strategy_name }} {{ backtest.security.symbol }} - Backtester{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'backtests:index' %}" class="text-blue-400 hover:text-blue-300 text-sm">&larr; Back to Dashboard</a>
+</div>
+{% include "backtests/partials/results_panel.html" %}
+{% endblock %}

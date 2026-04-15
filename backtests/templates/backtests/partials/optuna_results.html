@@ -1,0 +1,95 @@
+<div class="space-y-6">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h2 class="text-lg font-semibold mb-4">
+            Optimization Complete: {{ opt_run.strategy_name }} | {{ opt_run.security.symbol }}
+        </h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Objective</div>
+                <div class="text-lg font-bold">{{ opt_run.objective_metric }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Best Value</div>
+                <div class="text-lg font-bold text-green-400">{{ opt_run.best_value }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Trials</div>
+                <div class="text-lg font-bold">{{ opt_run.n_trials }}</div>
+            </div>
+        </div>
+
+        {% if opt_run.best_params %}
+        <h3 class="text-md font-semibold mb-3">Best Parameters</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6 text-sm">
+            {% for key, val in opt_run.best_params.items %}
+            <div class="bg-green-900/30 border border-green-800 rounded px-3 py-2">
+                <span class="text-green-300">{{ key }}:</span>
+                <span class="font-mono text-green-100">{{ val }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if opt_run.trials_data %}
+        <h3 class="text-md font-semibold mb-3">Trial Results</h3>
+        <div id="trials-chart" style="height: 250px;" class="mb-4"></div>
+        <script>
+            (function() {
+                const container = document.getElementById('trials-chart');
+                const chart = LightweightCharts.createChart(container, {
+                    layout: { background: { color: '#111827' }, textColor: '#9ca3af' },
+                    grid: { vertLines: { color: '#1f2937' }, horzLines: { color: '#1f2937' } },
+                    rightPriceScale: { borderColor: '#374151' },
+                    timeScale: { borderColor: '#374151', visible: false },
+                });
+
+                const trials = {{ opt_run.trials_data|safe }};
+                const series = chart.addHistogramSeries({
+                    color: '#8b5cf6',
+                });
+                series.setData(trials
+                    .filter(t => t.value > -900)
+                    .map((t, i) => ({
+                        time: i + 1,
+                        value: t.value,
+                        color: t.value >= {{ opt_run.best_value|default:"0" }} * 0.9 ? '#22c55e' : '#8b5cf6',
+                    }))
+                );
+                chart.timeScale().fitContent();
+
+                new ResizeObserver(() => {
+                    chart.applyOptions({ width: container.clientWidth });
+                }).observe(container);
+            })();
+        </script>
+
+        <div class="overflow-x-auto max-h-60 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="sticky top-0 bg-gray-900">
+                    <tr class="text-gray-400 border-b border-gray-800">
+                        <th class="text-left py-2 px-2">#</th>
+                        <th class="text-right py-2 px-2">Value</th>
+                        <th class="text-left py-2 px-2">Parameters</th>
+                        <th class="text-left py-2 px-2">State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for trial in opt_run.trials_data %}
+                    <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 {% if trial.value == opt_run.best_value %}bg-green-900/20{% endif %}">
+                        <td class="py-1.5 px-2">{{ trial.number }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono {% if trial.value > 0 %}text-green-400{% elif trial.value <= -900 %}text-gray-600{% else %}text-red-400{% endif %}">
+                            {% if trial.value > -900 %}{{ trial.value }}{% else %}failed{% endif %}
+                        </td>
+                        <td class="py-1.5 px-2 text-xs text-gray-400 font-mono">
+                            {% for k, v in trial.params.items %}{{ k }}={{ v }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </td>
+                        <td class="py-1.5 px-2 text-xs">{{ trial.state }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python312", "gcc"]
+
+[phases.install]
+cmds = ["curl -LsSf https://astral.sh/uv/install.sh | sh", "uv sync --frozen"]
+
+[start]
+cmd = "uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput && uv run gunicorn backtester.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120"

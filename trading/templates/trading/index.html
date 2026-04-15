@@ -1,0 +1,142 @@
+{% extends "backtests/base.html" %}
+
+{% block title %}Live Trading - Backtester{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'backtests:index' %}" class="text-blue-400 hover:text-blue-300 text-sm">&larr; Back to Dashboard</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left column: Deploy -->
+    <div class="space-y-6">
+
+        <!-- One-Click Preset Deploy -->
+        {% for key, preset in presets.items %}
+        <div class="bg-gradient-to-br from-green-900/40 to-blue-900/40 rounded-lg border border-green-700/50 p-5">
+            <h2 class="text-lg font-semibold mb-2">{{ preset.name }}</h2>
+            <p class="text-sm text-gray-400 mb-4">{{ preset.description }}</p>
+
+            <div class="grid grid-cols-2 gap-2 text-sm mb-4">
+                <div class="bg-gray-800/60 rounded px-2 py-1.5">
+                    <span class="text-gray-400">Capital:</span>
+                    <span class="font-mono">${{ preset.capital|floatformat:0 }}</span>
+                </div>
+                <div class="bg-gray-800/60 rounded px-2 py-1.5">
+                    <span class="text-gray-400">Margin:</span>
+                    <span class="font-mono">{{ preset.margin_multiplier }}x</span>
+                </div>
+                <div class="bg-gray-800/60 rounded px-2 py-1.5">
+                    <span class="text-gray-400">Effective:</span>
+                    <span class="font-mono text-green-400">${{ preset.capital|floatformat:0 }}</span>
+                </div>
+                <div class="bg-gray-800/60 rounded px-2 py-1.5">
+                    <span class="text-gray-400">Max trades:</span>
+                    <span class="font-mono">{{ preset.max_trades_per_day }}/day</span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-xs text-gray-500 mb-2">Kelly-Weighted Allocation</p>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for sym, cfg in preset.symbols.items %}
+                    <div class="bg-gray-800 rounded px-2 py-1 text-xs">
+                        <span class="font-mono font-bold">{{ sym }}</span>
+                        <span class="text-gray-400 ml-1">{{ cfg.weight|floatformat:0 }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-gray-800/40 rounded p-2 mb-4 text-xs text-gray-400">
+                <p class="font-semibold text-gray-300 mb-1">Projected (180-day backtest)</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>Daily: <span class="text-green-400 font-mono">~$161</span></div>
+                    <div>Monthly: <span class="text-green-400 font-mono">~$3,387</span></div>
+                    <div>Options: <span class="text-blue-400">top 30%</span></div>
+                </div>
+            </div>
+
+            <form hx-post="{% url 'trading:start_preset' %}"
+                  hx-target="#sessions-panel"
+                  hx-swap="afterbegin"
+                  hx-indicator="#preset-spinner-{{ key }}">
+                {% csrf_token %}
+                <input type="hidden" name="preset" value="{{ key }}">
+                <button type="submit"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition text-lg"
+                        onclick="return confirm('Deploy Hybrid ORB with $50k? This will start live paper trading.')">
+                    <span class="htmx-indicator" id="preset-spinner-{{ key }}">
+                        <svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        Deploying...
+                    </span>
+                    <span>Deploy Hybrid System</span>
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <!-- Custom Session Form -->
+        <details class="bg-gray-900 rounded-lg border border-gray-800">
+            <summary class="p-5 cursor-pointer text-gray-400 hover:text-white text-sm">
+                Custom Session (advanced)
+            </summary>
+            <div class="px-5 pb-5">
+                <form hx-post="{% url 'trading:start' %}"
+                      hx-target="#sessions-panel"
+                      hx-swap="afterbegin"
+                      class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Symbols</label>
+                        <input type="text" name="symbols" placeholder="AVGO, GOOGL, CRM, META"
+                               class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Capital</label>
+                            <input type="number" name="capital" value="50000"
+                                   class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Mode</label>
+                            <select name="mode" class="w-full px-3 py-2 border border-gray-600 bg-gray-800 text-gray-100 rounded-md text-sm">
+                                <option value="hybrid">Hybrid (Stock + Options)</option>
+                                <option value="stock">Stock Only</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 text-sm text-gray-400">
+                            <input type="checkbox" name="use_margin" checked class="rounded bg-gray-800 border-gray-600">
+                            2x Margin
+                        </label>
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition text-sm">
+                        Start Custom Session
+                    </button>
+                </form>
+            </div>
+        </details>
+    </div>
+
+    <!-- Right column: Sessions -->
+    <div class="lg:col-span-2">
+        <h2 class="text-lg font-semibold mb-4">Sessions</h2>
+        <div id="sessions-panel" class="space-y-4">
+            {% for session in sessions %}
+                {% include "trading/partials/session_card.html" with session=session is_running=False %}
+            {% empty %}
+                <div class="bg-gray-900 rounded-lg border border-gray-800 p-8 text-center">
+                    <p class="text-gray-500 mb-2">No live sessions yet.</p>
+                    <p class="text-gray-600 text-sm">Deploy the Hybrid System to start paper trading.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

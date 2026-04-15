@@ -1,0 +1,10 @@
+<div class="bg-red-900/30 border border-red-800 rounded-lg p-5">
+    <h3 class="text-red-300 font-semibold mb-2">Validation Errors</h3>
+    <ul class="text-red-200 text-sm list-disc list-inside">
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+            <li><strong>{{ field }}:</strong> {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>

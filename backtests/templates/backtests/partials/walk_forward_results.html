@@ -1,0 +1,64 @@
+<div class="space-y-6">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h2 class="text-lg font-semibold mb-4">
+            Walk-Forward: {{ strategy_name }} | {{ symbol }}
+        </h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Windows</div>
+                <div class="text-xl font-bold">{{ result.n_windows }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Avg OOS Sharpe</div>
+                <div class="text-xl font-bold {% if result.avg_oos_sharpe and result.avg_oos_sharpe > 0 %}text-green-400{% elif result.avg_oos_sharpe and result.avg_oos_sharpe < 0 %}text-red-400{% endif %}">
+                    {{ result.avg_oos_sharpe|default:"-" }}
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Avg OOS Return</div>
+                <div class="text-xl font-bold {% if result.avg_oos_return_pct and result.avg_oos_return_pct > 0 %}text-green-400{% elif result.avg_oos_return_pct and result.avg_oos_return_pct < 0 %}text-red-400{% endif %}">
+                    {{ result.avg_oos_return_pct|default:"-" }}%
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Total OOS Trades</div>
+                <div class="text-xl font-bold">{{ result.total_oos_trades }}</div>
+            </div>
+        </div>
+
+        {% if result.windows %}
+        <h3 class="text-md font-semibold mb-3">Windows</h3>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="sticky top-0 bg-gray-900">
+                    <tr class="text-gray-400 border-b border-gray-800">
+                        <th class="text-left py-2 px-2">Train</th>
+                        <th class="text-left py-2 px-2">Test</th>
+                        <th class="text-right py-2 px-2">IS Value</th>
+                        <th class="text-right py-2 px-2">OOS Sharpe</th>
+                        <th class="text-right py-2 px-2">OOS Return</th>
+                        <th class="text-right py-2 px-2">Trades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for w in result.windows %}
+                    <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td class="py-1.5 px-2 text-xs text-gray-400">{{ w.train_start }} - {{ w.train_end }}</td>
+                        <td class="py-1.5 px-2 text-xs text-gray-400">{{ w.test_start }} - {{ w.test_end }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono">{{ w.in_sample_value }}</td>
+                        <td class="py-1.5 px-2 text-right font-mono {% if w.oos_metrics.sharpe_ratio > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                            {{ w.oos_metrics.sharpe_ratio|default:"-" }}
+                        </td>
+                        <td class="py-1.5 px-2 text-right font-mono {% if w.oos_metrics.total_return_pct > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                            {{ w.oos_metrics.total_return_pct|default:"-" }}%
+                        </td>
+                        <td class="py-1.5 px-2 text-right">{{ w.oos_trades_count }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>

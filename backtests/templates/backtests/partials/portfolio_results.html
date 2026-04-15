@@ -1,0 +1,101 @@
+<div class="space-y-6">
+    <!-- Combined Metrics -->
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h2 class="text-lg font-semibold mb-4">
+            Portfolio: {{ strategy_name }} | {{ symbols|join:", " }}
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Total Return</div>
+                <div class="text-xl font-bold {% if portfolio.combined_metrics.total_return_pct and portfolio.combined_metrics.total_return_pct > 0 %}text-green-400{% elif portfolio.combined_metrics.total_return_pct and portfolio.combined_metrics.total_return_pct < 0 %}text-red-400{% endif %}">
+                    {{ portfolio.combined_metrics.total_return_pct }}%
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Sharpe</div>
+                <div class="text-xl font-bold">{{ portfolio.combined_metrics.sharpe_ratio }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Max Drawdown</div>
+                <div class="text-xl font-bold text-red-400">{{ portfolio.combined_metrics.max_drawdown_pct }}%</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Total Trades</div>
+                <div class="text-xl font-bold">{{ portfolio.combined_metrics.total_trades }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Win Rate</div>
+                <div class="text-xl font-bold">{{ portfolio.combined_metrics.win_rate_pct }}%</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Profit Factor</div>
+                <div class="text-xl font-bold">{{ portfolio.combined_metrics.profit_factor }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Sortino</div>
+                <div class="text-xl font-bold">{{ portfolio.combined_metrics.sortino_ratio }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Capital</div>
+                <div class="text-xl font-bold">${{ portfolio.total_capital }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combined Equity Curve -->
+    {% if equity_curve_json %}
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h3 class="text-md font-semibold mb-3">Combined Equity Curve</h3>
+        <div id="portfolio-chart" style="height: 300px;"></div>
+        <script>
+            (function() {
+                const container = document.getElementById('portfolio-chart');
+                const chart = LightweightCharts.createChart(container, {
+                    layout: { background: { color: '#111827' }, textColor: '#9ca3af' },
+                    grid: { vertLines: { color: '#1f2937' }, horzLines: { color: '#1f2937' } },
+                    timeScale: { timeVisible: true, borderColor: '#374151' },
+                    rightPriceScale: { borderColor: '#374151' },
+                });
+                const data = {{ equity_curve_json|safe }};
+                const series = chart.addLineSeries({ color: '#3b82f6', lineWidth: 2 });
+                series.setData(data.map(d => ({ time: Math.floor(d.t / 1000), value: d.v })));
+                chart.timeScale().fitContent();
+                new ResizeObserver(() => chart.applyOptions({ width: container.clientWidth })).observe(container);
+            })();
+        </script>
+    </div>
+    {% endif %}
+
+    <!-- Per-Symbol Breakdown -->
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h3 class="text-md font-semibold mb-3">Per-Symbol Breakdown</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-400 border-b border-gray-800">
+                        <th class="text-left py-2 px-2">Symbol</th>
+                        <th class="text-right py-2 px-2">Return</th>
+                        <th class="text-right py-2 px-2">Sharpe</th>
+                        <th class="text-right py-2 px-2">Win Rate</th>
+                        <th class="text-right py-2 px-2">Trades</th>
+                        <th class="text-right py-2 px-2">Max DD</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for sym, result in portfolio.per_symbol.items %}
+                    <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td class="py-2 px-2 font-mono">{{ sym }}</td>
+                        <td class="py-2 px-2 text-right font-mono {% if result.metrics.total_return_pct > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                            {{ result.metrics.total_return_pct }}%
+                        </td>
+                        <td class="py-2 px-2 text-right font-mono">{{ result.metrics.sharpe_ratio }}</td>
+                        <td class="py-2 px-2 text-right font-mono">{{ result.metrics.win_rate_pct }}%</td>
+                        <td class="py-2 px-2 text-right">{{ result.metrics.total_trades }}</td>
+                        <td class="py-2 px-2 text-right font-mono text-red-400">{{ result.metrics.max_drawdown_pct }}%</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

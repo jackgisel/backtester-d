@@ -1,0 +1,65 @@
+<div class="space-y-6">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
+        <h2 class="text-lg font-semibold mb-4">
+            Cross-Symbol Validation: {{ strategy_name }}
+        </h2>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Symbols Tested</div>
+                <div class="text-xl font-bold">{{ result.symbols_tested }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Succeeded</div>
+                <div class="text-xl font-bold">{{ result.symbols_succeeded }}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Avg Sharpe</div>
+                <div class="text-xl font-bold {% if result.avg_sharpe and result.avg_sharpe > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                    {{ result.avg_sharpe|default:"-" }}
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-1">Avg Return</div>
+                <div class="text-xl font-bold {% if result.avg_return_pct and result.avg_return_pct > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                    {{ result.avg_return_pct|default:"-" }}%
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-md font-semibold mb-3">Per-Symbol Results</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-400 border-b border-gray-800">
+                        <th class="text-left py-2 px-2">Symbol</th>
+                        <th class="text-right py-2 px-2">Return</th>
+                        <th class="text-right py-2 px-2">Sharpe</th>
+                        <th class="text-right py-2 px-2">Win Rate</th>
+                        <th class="text-right py-2 px-2">Trades</th>
+                        <th class="text-left py-2 px-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for symbol, data in result.per_symbol.items %}
+                    <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td class="py-1.5 px-2 font-mono">{{ symbol }}</td>
+                        {% if data.metrics %}
+                            <td class="py-1.5 px-2 text-right font-mono {% if data.metrics.total_return_pct > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                                {{ data.metrics.total_return_pct }}%
+                            </td>
+                            <td class="py-1.5 px-2 text-right font-mono">{{ data.metrics.sharpe_ratio }}</td>
+                            <td class="py-1.5 px-2 text-right font-mono">{{ data.metrics.win_rate_pct }}%</td>
+                            <td class="py-1.5 px-2 text-right">{{ data.n_trades }}</td>
+                            <td class="py-1.5 px-2"><span class="px-2 py-0.5 rounded-full text-xs bg-green-900 text-green-300">ok</span></td>
+                        {% else %}
+                            <td colspan="4" class="py-1.5 px-2 text-red-400 text-xs">{{ data.error }}</td>
+                            <td class="py-1.5 px-2"><span class="px-2 py-0.5 rounded-full text-xs bg-red-900 text-red-300">failed</span></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

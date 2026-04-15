@@ -1,0 +1,20 @@
+[project]
+name = "backtester"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "alpaca-py>=0.43.2",
+    "dj-database-url>=3.1.2",
+    "django>=6.0.4",
+    "django-bolt>=0.7.4",
+    "django-htmx>=1.27.0",
+    "gunicorn>=25.3.0",
+    "numpy>=2.4.4",
+    "optuna>=4.8.0",
+    "psycopg2-binary>=2.9.11",
+    "python-dotenv>=1.2.2",
+    "pytz>=2026.1.post1",
+    "ta>=0.11.0",
+    "whitenoise>=6.12.0",
+]
