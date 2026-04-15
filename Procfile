@@ -1,1 +1,1 @@
-web: uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput && uv run gunicorn backtester.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+web: uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput && uv run python manage.py setup_initial && uv run gunicorn backtester.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
