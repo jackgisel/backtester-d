@@ -5,6 +5,7 @@ import threading
 from datetime import datetime, timedelta
 
 import pytz
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
 
@@ -92,7 +93,7 @@ class LiveRunner:
         if action is None:
             return
 
-        self._update_states_db()
+        await self._update_states_db()
 
         if action["action"] == "scored":
             await self._handle_scoring()
@@ -137,7 +138,7 @@ class LiveRunner:
             f"Scoring complete: approved={[f'{s}({sc:.0f})' for s,sc in approved]}, "
             f"rejected={[s for s in self.states if s not in approved_syms and self.states[s].setup_score > 0]}"
         )
-        self._update_states_db()
+        await self._update_states_db()
 
     async def _execute_entry(self, symbol: str, action: dict):
         """Execute entry — options for top signals, stock for the rest."""
@@ -182,7 +183,7 @@ class LiveRunner:
             )
             logger.info(f"[{symbol}] STOCK bracket order: {order.id} ({shares} shares)")
 
-            LiveTrade.objects.create(
+            await sync_to_async(LiveTrade.objects.create)(
                 session=self.session,
                 symbol=symbol,
                 instrument_type=LiveTrade.InstrumentType.STOCK,
@@ -244,7 +245,7 @@ class LiveRunner:
                 f"[{symbol}] OPTION order: {option_symbol} x{contracts} ({order.id})"
             )
 
-            LiveTrade.objects.create(
+            await sync_to_async(LiveTrade.objects.create)(
                 session=self.session,
                 symbol=symbol,
                 instrument_type=LiveTrade.InstrumentType.OPTION,
@@ -277,22 +278,28 @@ class LiveRunner:
         except Exception as e:
             logger.warning(f"[{symbol}] Flatten failed: {e}")
 
-    def _update_states_db(self):
+    async def _update_states_db(self):
         """Persist symbol states to DB for UI polling."""
         try:
-            self.session.refresh_from_db()
+            await sync_to_async(self.session.refresh_from_db)()
             self.session.symbol_states = {
                 sym: s.state.value for sym, s in self.states.items()
             }
             self.session.trades_today = self._trades_placed
-            self.session.save(update_fields=["symbol_states", "trades_today"])
+            await sync_to_async(self.session.save)(update_fields=["symbol_states", "trades_today"])
         except Exception:
             pass
 
+    async def _save_session(self, **kwargs):
+        """Helper to save session fields from async context."""
+        for k, v in kwargs.items():
+            setattr(self.session, k, v)
+        fields = list(kwargs.keys())
+        await sync_to_async(self.session.save)(update_fields=fields)
+
     async def _run(self):
         """Main async loop."""
-        self.session.status = LiveSession.Status.RUNNING
-        self.session.save(update_fields=["status"])
+        await self._save_session(status=LiveSession.Status.RUNNING)
 
         self.data_stream.subscribe_bars(self._on_bar, *self.session.symbols)
 
@@ -302,9 +309,9 @@ class LiveRunner:
             pass
         except Exception as e:
             logger.error(f"Stream error: {e}")
-            self.session.error_message = str(e)
-            self.session.status = LiveSession.Status.FAILED
-            self.session.save(update_fields=["status", "error_message"])
+            await self._save_session(
+                status=LiveSession.Status.FAILED, error_message=str(e),
+            )
 
     def start(self):
         """Start the runner in a background thread."""
