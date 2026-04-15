@@ -1,6 +1,7 @@
-"""One-time setup: superuser + securities + intraday data.
+"""One-time setup: superuser + securities.
 
 Runs on first deploy. Safe to re-run (idempotent).
+Intraday data is NOT fetched here — live trading streams directly from Alpaca.
 """
 import os
 
@@ -9,16 +10,12 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 
-TRADING_SYMBOLS = ["AVGO", "GOOGL", "CRM", "META"]
-
-
 class Command(BaseCommand):
-    help = "Initial setup: create superuser, fetch securities and intraday data"
+    help = "Initial setup: create superuser and fetch securities"
 
     def handle(self, *args, **options):
         self._create_superuser()
         self._fetch_securities()
-        self._fetch_intraday()
 
     def _create_superuser(self):
         User = get_user_model()
@@ -48,16 +45,3 @@ class Command(BaseCommand):
 
         self.stdout.write("Fetching securities from Alpaca...")
         call_command("fetch_securities")
-
-    def _fetch_intraday(self):
-        from prices.models import IntradayBar
-
-        # Check if we already have substantial data for our trading symbols
-        for sym in TRADING_SYMBOLS:
-            count = IntradayBar.objects.filter(security__symbol=sym).count()
-            if count > 10000:
-                self.stdout.write(f"{sym}: {count} bars already loaded, skipping")
-                continue
-
-            self.stdout.write(f"Fetching 180 days of intraday data for {sym}...")
-            call_command("fetch_intraday", symbols=[sym], days=180)
